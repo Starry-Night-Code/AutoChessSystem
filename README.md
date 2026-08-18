@@ -147,7 +147,8 @@ g++ -std=c++03 -Wall -Wextra -Werror -pedantic -o AutoChessSystem.exe AutoChessS
 4. Refresh shop (2 gold)
 5. Sell piece
 6. Place or move piece
-7. Finish preparation
+7. Return piece to bench
+8. Finish preparation
 0. Abandon game
 ```
 
@@ -156,7 +157,7 @@ g++ -std=c++03 -Wall -Wextra -Werror -pedantic -o AutoChessSystem.exe AutoChessS
 1. 查看商店。
 2. 购买至少一个棋子。
 3. 选择 `Place or move piece`，将棋子放到第 4～5 行。
-4. 根据需要继续购买、刷新、出售或调整阵型。
+4. 根据需要继续购买、刷新、出售、调整阵型，或选择 `Return piece to bench` 将已部署棋子移回板凳。
 5. 确保至少有一个棋子上阵，然后选择 `Finish preparation`。
 6. AI 自动完成准备，随后进入自动战斗。
 

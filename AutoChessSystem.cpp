@@ -283,6 +283,7 @@ public:
     bool sellPiece(int index);
     bool placePiece(int index, int newRow, int newCol,
                     int minimumRow, int maximumRow);
+    bool returnPieceToBench(int index);
     bool checkAndMerge();
     bool isCellOccupied(int checkRow, int checkCol, int ignoredIndex) const;
     void clearAllPositions();
@@ -452,6 +453,7 @@ private:
     void handlePurchase();
     void handleSell();
     void handlePlacement();
+    void handleReturnToBench();
     void settleBattle(int result, int survivorStars);
 
 public:
@@ -1134,6 +1136,14 @@ bool Player::placePiece(int index, int newRow, int newCol,
     if (!wasDeployed && deployedCount >= MAX_DEPLOYED_PIECES) return false;
     pieces[index]->setPosition(newRow, newCol);
     if (!wasDeployed) deployedCount++;
+    return true;
+}
+
+bool Player::returnPieceToBench(int index)
+{
+    if (index < 0 || index >= pieceCount || !pieces[index]->isDeployed()) return false;
+    pieces[index]->setPosition(-1, -1);
+    deployedCount--;
     return true;
 }
 
@@ -2040,7 +2050,8 @@ void GameSystem::showPreparationMenu() const
     cout << "4. Refresh shop (2 gold)\n";
     cout << "5. Sell piece\n";
     cout << "6. Place or move piece\n";
-    cout << "7. Finish preparation\n";
+    cout << "7. Return piece to bench\n";
+    cout << "8. Finish preparation\n";
     cout << "0. Abandon game\n";
     cout << "Select: ";
 }
@@ -2081,7 +2092,7 @@ void GameSystem::prepareHuman()
     {
         int choice;
         showPreparationMenu();
-        choice = readInteger(0, 7);
+        choice = readInteger(0, 8);
         if (choice == 1)
         {
             human.showStatus(true);
@@ -2100,7 +2111,8 @@ void GameSystem::prepareHuman()
         }
         else if (choice == 5) handleSell();
         else if (choice == 6) handlePlacement();
-        else if (choice == 7)
+        else if (choice == 7) handleReturnToBench();
+        else if (choice == 8)
         {
             if (!human.hasDeployedPiece()) cout << "Deploy at least one piece first.\n";
             else preparing = 0;
@@ -2171,6 +2183,22 @@ void GameSystem::handlePlacement()
     col = readInteger(0, 5);
     if (human.placePiece(index - 1, row, col, 4, 5)) cout << "Piece placed.\n";
     else cout << "Cannot place the piece there.\n";
+}
+
+void GameSystem::handleReturnToBench()
+{
+    int index;
+    human.showRoster(false);
+    if (human.getDeployedCount() == 0)
+    {
+        cout << "No deployed pieces.\n";
+        return;
+    }
+    cout << "Choose deployed piece (1-" << human.getPieceCount() << ", 0 cancel): ";
+    index = readInteger(0, human.getPieceCount());
+    if (index == 0) return;
+    if (human.returnPieceToBench(index - 1)) cout << "Piece returned to bench.\n";
+    else cout << "That piece is already on the bench.\n";
 }
 
 void GameSystem::playRound()
