@@ -347,7 +347,7 @@ public:
     void initializeCatalog();
     void setRandomSeed(unsigned long seed);
     void refresh();
-    void showOffers(bool readOnly) const;
+    void showOffers(const Player& viewer, bool readOnly) const;
     bool isOfferAvailable(int slot) const;
     int getOfferType(int slot) const;
     int getOfferCost(int slot) const;
@@ -1490,13 +1490,14 @@ void Shop::refresh()
     for (i = 0; i < SHOP_SLOT_COUNT; i++) offers[i] = nextRandom(PIECE_TYPE_COUNT);
 }
 
-void Shop::showOffers(bool readOnly) const
+void Shop::showOffers(const Player& viewer, bool readOnly) const
 {
     int i;
     if (readOnly)
         cout << "\n*** Shop ***\n";
     else
         cout << "\n--- Shop ---\n";
+    viewer.showStatus(false);
     for (i = 0; i < SHOP_SLOT_COUNT; i++)
     {
         cout << (i + 1) << ". ";
@@ -2093,7 +2094,7 @@ void GameSystem::prepareHuman()
             human.showStatus(true);
             human.showRoster(true);
         }
-        else if (choice == 2) shop.showOffers(true);
+        else if (choice == 2) shop.showOffers(human, true);
         else if (choice == 3) handlePurchase();
         else if (choice == 4)
         {
@@ -2126,7 +2127,7 @@ void GameSystem::prepareHuman()
 void GameSystem::handlePurchase()
 {
     int slot;
-    shop.showOffers(false);
+    shop.showOffers(human, false);
     cout << "Choose slot (1-5, 0 cancel): ";
     slot = readInteger(0, SHOP_SLOT_COUNT);
     if (slot == 0) return;

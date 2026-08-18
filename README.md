@@ -136,6 +136,8 @@ g++ -std=c++03 -Wall -Wextra -Werror -pedantic -o AutoChessSystem.exe AutoChessS
 
 只读展示页面使用 `*** Title ***` 表头；需要玩家继续选择的交互菜单和列表使用 `--- Title ---` 表头。
 
+选择 `Show shop` 或 `Buy piece` 时，程序会在 Shop 表头下方先显示一行玩家当前状态，再显示商品列表。该状态行不带 `Human Status` 表头。
+
 ### 准备阶段
 
 ```text
