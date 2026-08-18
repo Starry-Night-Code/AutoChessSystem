@@ -252,7 +252,6 @@ public:
     virtual void resetSpecialState();
     virtual void takeDamage(int damage);
     void addShield(int amount);
-    bool shouldHeal(ChessPiece* allies[], int count) const;
     int getShieldPoints() const;
 };
 
@@ -966,10 +965,12 @@ void PaladinPiece::useSkill(ChessPiece* target, ChessPiece* enemies[],
     int allyIndex;
     tickHealingCooldown();
     holyCounter++;
-    if (shouldHeal(allies, allyCount) && canHeal())
+    if (canHeal())
     {
         allyIndex = findLowestHealthAlly(allies, allyCount, this);
-        if (allyIndex >= 0)
+        if (allyIndex >= 0 &&
+            allies[allyIndex]->getHealth() * 100 /
+            allies[allyIndex]->getMaxHealth() < healThresholdPercent)
         {
             healAlly(allies[allyIndex]);
             addShield(maximumShield / 2);
@@ -1021,18 +1022,6 @@ void PaladinPiece::addShield(int amount)
 {
     shieldPoints += amount;
     if (shieldPoints > maximumShield) shieldPoints = maximumShield;
-}
-
-bool PaladinPiece::shouldHeal(ChessPiece* allies[], int count) const
-{
-    int i;
-    for (i = 0; i < count; i++)
-    {
-        if (allies[i] != 0 && allies[i]->isAlive() &&
-            allies[i]->getHealth() * 100 / allies[i]->getMaxHealth() < healThresholdPercent)
-            return true;
-    }
-    return false;
 }
 
 int PaladinPiece::getShieldPoints() const { return shieldPoints; }
