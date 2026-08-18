@@ -24,7 +24,7 @@ const int PIECE_TYPE_COUNT = 4;
 const int MAX_NAME_LENGTH = 20;
 const int MAX_FILE_NAME_LENGTH = 80;
 const int MAX_ERROR_LENGTH = 128;
-const int MAX_BATTLE_ROUNDS = 200;
+const int MAX_BATTLE_ROUNDS = 100;
 
 enum PieceType
 {
@@ -377,6 +377,7 @@ private:
     void sortBattlePiecesBySpeed();
     void buildTeamArray(int team, ChessPiece* output[], int& count) const;
     bool hasLivingTeam(int team) const;
+    void removeDeadPiecesFromBoard();
     void moveTowardTarget(ChessPiece* piece, ChessPiece* target);
 
 public:
@@ -1556,7 +1557,8 @@ bool Battlefield::isInsideBoard(int checkRow, int checkCol) const
 
 bool Battlefield::isCellEmpty(int checkRow, int checkCol) const
 {
-    return isInsideBoard(checkRow, checkCol) && cells[checkRow][checkCol] == 0;
+    return isInsideBoard(checkRow, checkCol) &&
+           (cells[checkRow][checkCol] == 0 || !cells[checkRow][checkCol]->isAlive());
 }
 
 void Battlefield::saveOriginalPosition(ChessPiece* piece)
@@ -1675,6 +1677,22 @@ bool Battlefield::hasLivingTeam(int teamNumber) const
     return false;
 }
 
+void Battlefield::removeDeadPiecesFromBoard()
+{
+    int i;
+    for (i = 0; i < battlePieceCount; i++)
+    {
+        ChessPiece* piece = battlePieces[i];
+        int pieceRow = piece->getRow();
+        int pieceCol = piece->getCol();
+        if (!piece->isAlive() && isInsideBoard(pieceRow, pieceCol) &&
+            cells[pieceRow][pieceCol] == piece)
+        {
+            cells[pieceRow][pieceCol] = 0;
+        }
+    }
+}
+
 void Battlefield::moveTowardTarget(ChessPiece* piece, ChessPiece* target)
 {
     const int directions[4][2] = {{-1,0},{0,-1},{0,1},{1,0}};
@@ -1742,6 +1760,7 @@ int Battlefield::runBattle(Player& first, Player& second, bool verbose, int& rou
                 acting->useSkill(enemies[targetIndex], enemies, enemyCount, allies, allyCount);
             else
                 moveTowardTarget(acting, enemies[targetIndex]);
+            removeDeadPiecesFromBoard();
         }
         if (verboseMode)
         {
