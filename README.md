@@ -134,6 +134,8 @@ g++ -std=c++03 -Wall -Wextra -Werror -pedantic -o AutoChessSystem.exe AutoChessS
 
 菜单使用英文 ASCII 文本，以避免 Visual Studio 2008 在不同系统代码页下出现中文乱码。
 
+只读展示页面使用 `*** Title ***` 表头；需要玩家继续选择的交互菜单和列表使用 `--- Title ---` 表头。
+
 ### 准备阶段
 
 ```text

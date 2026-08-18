@@ -280,7 +280,7 @@ public:
     bool checkAndMerge();
     bool isCellOccupied(int checkRow, int checkCol, int ignoredIndex) const;
     void clearAllPositions();
-    void showRoster() const;
+    void showRoster(bool readOnly) const;
     void showStatus() const;
     void addGold(int amount);
     bool spendGold(int amount);
@@ -344,7 +344,7 @@ public:
     void initializeCatalog();
     void setRandomSeed(unsigned long seed);
     void refresh();
-    void showOffers() const;
+    void showOffers(bool readOnly) const;
     bool isOfferAvailable(int slot) const;
     int getOfferType(int slot) const;
     int getOfferCost(int slot) const;
@@ -1210,10 +1210,13 @@ void Player::clearAllPositions()
     deployedCount = 0;
 }
 
-void Player::showRoster() const
+void Player::showRoster(bool readOnly) const
 {
     int i;
-    cout << "\n--- " << playerName << " Roster ---\n";
+    if (readOnly)
+        cout << "\n*** " << playerName << " Roster ***\n";
+    else
+        cout << "\n--- " << playerName << " Roster ---\n";
     if (pieceCount == 0) cout << "No pieces owned.\n";
     for (i = 0; i < pieceCount; i++) cout << (i + 1) << ". " << *pieces[i] << "\n";
 }
@@ -1454,10 +1457,13 @@ void Shop::refresh()
     for (i = 0; i < SHOP_SLOT_COUNT; i++) offers[i] = nextRandom(PIECE_TYPE_COUNT);
 }
 
-void Shop::showOffers() const
+void Shop::showOffers(bool readOnly) const
 {
     int i;
-    cout << "\n--- Shop ---\n";
+    if (readOnly)
+        cout << "\n*** Shop ***\n";
+    else
+        cout << "\n--- Shop ---\n";
     for (i = 0; i < SHOP_SLOT_COUNT; i++)
     {
         cout << (i + 1) << ". ";
@@ -2052,9 +2058,9 @@ void GameSystem::prepareHuman()
         if (choice == 1)
         {
             human.showStatus();
-            human.showRoster();
+            human.showRoster(true);
         }
-        else if (choice == 2) shop.showOffers();
+        else if (choice == 2) shop.showOffers(true);
         else if (choice == 3) handlePurchase();
         else if (choice == 4)
         {
@@ -2087,7 +2093,7 @@ void GameSystem::prepareHuman()
 void GameSystem::handlePurchase()
 {
     int slot;
-    shop.showOffers();
+    shop.showOffers(false);
     cout << "Choose slot (1-5, 0 cancel): ";
     slot = readInteger(0, SHOP_SLOT_COUNT);
     if (slot == 0) return;
@@ -2117,7 +2123,7 @@ void GameSystem::handlePurchase()
 void GameSystem::handleSell()
 {
     int index;
-    human.showRoster();
+    human.showRoster(false);
     if (human.getPieceCount() == 0) return;
     cout << "Choose piece to sell (1-" << human.getPieceCount() << ", 0 cancel): ";
     index = readInteger(0, human.getPieceCount());
@@ -2127,7 +2133,7 @@ void GameSystem::handleSell()
 void GameSystem::handlePlacement()
 {
     int index, row, col;
-    human.showRoster();
+    human.showRoster(false);
     if (human.getPieceCount() == 0) return;
     cout << "Choose piece (1-" << human.getPieceCount() << ", 0 cancel): ";
     index = readInteger(0, human.getPieceCount());
@@ -2194,7 +2200,7 @@ void GameSystem::settleBattle(int result, int survivorStars)
 
 void GameSystem::showInstructions() const
 {
-    cout << "\n--- Instructions ---\n";
+    cout << "\n*** Instructions ***\n";
     cout << "Buy pieces, combine three identical stars, and deploy up to six pieces.\n";
     cout << "Human pieces must be placed in rows 4-5. AI uses rows 0-1.\n";
     cout << "Battle is automatic. W=Warrior, A=Archer, M=Mage, P=Paladin.\n";
