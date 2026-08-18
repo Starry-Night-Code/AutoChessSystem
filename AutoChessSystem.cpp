@@ -309,20 +309,31 @@ class AIPlayer : public Player
 {
 private:
     int maximumRefreshes;
-    int duplicateBonus;
-    int valueWeight;
     int refreshesUsed;
+
+    bool isFrontlineType(int pieceType) const;
+    int countPiecesAtStar(int pieceType, int starLevel) const;
+    int countRolePieces(bool frontline) const;
+    int calculatePieceValue(const ChessPiece* piece) const;
+    int calculatePurchaseChange(int pieceType) const;
+    int calculateResultingStar(int pieceType) const;
+    void selectCorePieces(int selected[], int& selectedCount) const;
+    bool isSelectedIndex(int pieceIndex, const int selected[], int selectedCount) const;
+    bool isCoreType(int pieceType) const;
+    bool hasUpgradableCorePiece(int pieceType) const;
+    int findWeakestCoreValue(bool frontline) const;
+    int classifyOffer(const Shop& shop, int slot) const;
+    int chooseBestOffer(const Shop& shop) const;
+    int findSellCandidate(int offerType) const;
+    bool hasRoomForFutureOffer() const;
+    bool shouldRefresh(const Shop& shop) const;
 
 public:
     AIPlayer(const char* newName = "Computer", int newId = 1);
     virtual ~AIPlayer();
     void resetAI();
-    int evaluateOffer(const Shop& shop, int slot) const;
-    int countSameType(int pieceType) const;
     void performShopping(Shop& shop);
     void arrangeFormation();
-    int chooseBestOffer(const Shop& shop) const;
-    bool shouldRefresh(const Shop& shop) const;
     int getRefreshesUsed() const;
 };
 
@@ -1295,8 +1306,7 @@ ChessPiece* Player::getPiece(int index) const
 bool Player::hasDeployedPiece() const { return deployedCount > 0; }
 
 AIPlayer::AIPlayer(const char* newName, int newId)
-    : Player(newName, newId), maximumRefreshes(1), duplicateBonus(300), valueWeight(10),
-      refreshesUsed(0)
+    : Player(newName, newId), maximumRefreshes(1), refreshesUsed(0)
 {
 }
 
@@ -1310,42 +1320,275 @@ void AIPlayer::resetAI()
     ready = 0;
 }
 
-int AIPlayer::evaluateOffer(const Shop& shop, int slot) const
+bool AIPlayer::isFrontlineType(int pieceType) const
 {
-    int typeValue;
-    int costValue;
-    int score;
-    if (!shop.isOfferAvailable(slot)) return -999999;
-    typeValue = shop.getOfferType(slot);
-    costValue = shop.getOfferCost(slot);
-    if (costValue > gold) return -999999;
-    score = valueWeight * (6 - costValue) + countSameType(typeValue) * duplicateBonus;
-    if (typeValue == TYPE_WARRIOR || typeValue == TYPE_PALADIN) score += 25;
-    if (pieceCount < 3) score += 100;
-    return score;
+    return pieceType == TYPE_WARRIOR || pieceType == TYPE_PALADIN;
 }
 
-int AIPlayer::countSameType(int pieceType) const
+int AIPlayer::countPiecesAtStar(int pieceType, int starLevel) const
 {
     int count = 0;
     int i;
     for (i = 0; i < pieceCount; i++)
-        if (pieces[i]->getType() == pieceType) count++;
+        if (pieces[i]->getType() == pieceType && pieces[i]->getStar() == starLevel) count++;
     return count;
+}
+
+int AIPlayer::countRolePieces(bool frontline) const
+{
+    int count = 0;
+    int i;
+    for (i = 0; i < pieceCount; i++)
+        if (isFrontlineType(pieces[i]->getType()) == frontline) count++;
+    return count;
+}
+
+int AIPlayer::calculatePieceValue(const ChessPiece* piece) const
+{
+    if (piece == 0) return -1;
+    return piece->getStar() * 1000 + piece->getCost() * 100;
+}
+
+int AIPlayer::calculatePurchaseChange(int pieceType) const
+{
+    int change = 1;
+    int starLevel = 1;
+    while (starLevel < 3 && countPiecesAtStar(pieceType, starLevel) >= 2)
+    {
+        change -= 2;
+        starLevel++;
+    }
+    return change;
+}
+
+int AIPlayer::calculateResultingStar(int pieceType) const
+{
+    int starLevel = 1;
+    while (starLevel < 3 && countPiecesAtStar(pieceType, starLevel) >= 2)
+        starLevel++;
+    return starLevel;
+}
+
+void AIPlayer::selectCorePieces(int selected[], int& selectedCount) const
+{
+    bool used[MAX_OWNED_PIECES];
+    int desiredCount = pieceCount;
+    int rolePass;
+    int i;
+    if (desiredCount > MAX_DEPLOYED_PIECES) desiredCount = MAX_DEPLOYED_PIECES;
+    selectedCount = 0;
+    for (i = 0; i < MAX_OWNED_PIECES; i++) used[i] = false;
+
+    for (rolePass = 0; rolePass < 2; rolePass++)
+    {
+        bool frontline = rolePass == 0;
+        int roleSelections;
+        for (roleSelections = 0; roleSelections < 2 && selectedCount < desiredCount;
+             roleSelections++)
+        {
+            int bestIndex = -1;
+            int bestValue = -1;
+            for (i = 0; i < pieceCount; i++)
+            {
+                int currentValue;
+                if (used[i] || isFrontlineType(pieces[i]->getType()) != frontline) continue;
+                currentValue = calculatePieceValue(pieces[i]);
+                if (bestIndex < 0 || currentValue > bestValue)
+                {
+                    bestIndex = i;
+                    bestValue = currentValue;
+                }
+            }
+            if (bestIndex < 0) break;
+            used[bestIndex] = true;
+            selected[selectedCount++] = bestIndex;
+        }
+    }
+
+    while (selectedCount < desiredCount)
+    {
+        int bestIndex = -1;
+        int bestValue = -1;
+        for (i = 0; i < pieceCount; i++)
+        {
+            int currentValue;
+            if (used[i]) continue;
+            currentValue = calculatePieceValue(pieces[i]);
+            if (bestIndex < 0 || currentValue > bestValue)
+            {
+                bestIndex = i;
+                bestValue = currentValue;
+            }
+        }
+        if (bestIndex < 0) break;
+        used[bestIndex] = true;
+        selected[selectedCount++] = bestIndex;
+    }
+}
+
+bool AIPlayer::isSelectedIndex(int pieceIndex, const int selected[],
+                               int selectedCount) const
+{
+    int i;
+    for (i = 0; i < selectedCount; i++)
+        if (selected[i] == pieceIndex) return true;
+    return false;
+}
+
+bool AIPlayer::isCoreType(int pieceType) const
+{
+    int selected[MAX_OWNED_PIECES];
+    int selectedCount;
+    int i;
+    selectCorePieces(selected, selectedCount);
+    for (i = 0; i < selectedCount; i++)
+        if (pieces[selected[i]]->getType() == pieceType) return true;
+    return false;
+}
+
+bool AIPlayer::hasUpgradableCorePiece(int pieceType) const
+{
+    int selected[MAX_OWNED_PIECES];
+    int selectedCount;
+    int i;
+    selectCorePieces(selected, selectedCount);
+    for (i = 0; i < selectedCount; i++)
+    {
+        ChessPiece* piece = pieces[selected[i]];
+        if (piece->getType() == pieceType && piece->getStar() < 3) return true;
+    }
+    return false;
+}
+
+int AIPlayer::findWeakestCoreValue(bool frontline) const
+{
+    int selected[MAX_OWNED_PIECES];
+    int selectedCount;
+    int weakestValue = -1;
+    int i;
+    selectCorePieces(selected, selectedCount);
+    for (i = 0; i < selectedCount; i++)
+    {
+        ChessPiece* piece = pieces[selected[i]];
+        int currentValue;
+        if (isFrontlineType(piece->getType()) != frontline) continue;
+        currentValue = calculatePieceValue(piece);
+        if (weakestValue < 0 || currentValue < weakestValue) weakestValue = currentValue;
+    }
+    return weakestValue;
+}
+
+int AIPlayer::findSellCandidate(int offerType) const
+{
+    int selected[MAX_OWNED_PIECES];
+    int selectedCount;
+    int candidate = -1;
+    int candidateValue = -1;
+    int i;
+    selectCorePieces(selected, selectedCount);
+    for (i = 0; i < pieceCount; i++)
+    {
+        ChessPiece* piece = pieces[i];
+        bool frontline;
+        int currentValue;
+        if (isSelectedIndex(i, selected, selectedCount) || piece->getStar() != 1 ||
+            piece->getType() == offerType ||
+            countPiecesAtStar(piece->getType(), 1) != 1)
+            continue;
+        frontline = isFrontlineType(piece->getType());
+        if (countRolePieces(frontline) <= 2) continue;
+        currentValue = calculatePieceValue(piece);
+        if (candidate < 0 || currentValue < candidateValue ||
+            (currentValue == candidateValue && i > candidate))
+        {
+            candidate = i;
+            candidateValue = currentValue;
+        }
+    }
+    return candidate;
+}
+
+bool AIPlayer::hasRoomForFutureOffer() const
+{
+    int pieceType;
+    if (pieceCount < MAX_OWNED_PIECES) return true;
+    for (pieceType = TYPE_WARRIOR; pieceType <= TYPE_PALADIN; pieceType++)
+        if (findSellCandidate(pieceType) >= 0) return true;
+    return false;
+}
+
+int AIPlayer::classifyOffer(const Shop& shop, int slot) const
+{
+    int pieceType;
+    int pieceCost;
+    int purchaseChange;
+    bool frontline;
+    bool formationStage;
+    if (!shop.isOfferAvailable(slot)) return 0;
+    pieceType = shop.getOfferType(slot);
+    pieceCost = shop.getOfferCost(slot);
+    if (pieceCost > gold) return 0;
+    if (pieceCount >= MAX_OWNED_PIECES && findSellCandidate(pieceType) < 0) return 0;
+
+    frontline = isFrontlineType(pieceType);
+    purchaseChange = calculatePurchaseChange(pieceType);
+    formationStage = pieceCount < MAX_DEPLOYED_PIECES ||
+                     countRolePieces(true) < 2 || countRolePieces(false) < 2;
+    if (formationStage)
+    {
+        if (purchaseChange > 0 && countRolePieces(frontline) < 2) return 40;
+        if (purchaseChange > 0) return 30;
+        return 20;
+    }
+
+    if (countPiecesAtStar(pieceType, 1) >= 2) return 50;
+    if (countPiecesAtStar(pieceType, 1) == 1 && isCoreType(pieceType)) return 40;
+    {
+        int weakestValue = findWeakestCoreValue(frontline);
+        int offerValue = 1000 + pieceCost * 100;
+        if (weakestValue >= 0 && offerValue > weakestValue) return 30;
+    }
+    if (isCoreType(pieceType) && hasUpgradableCorePiece(pieceType)) return 20;
+    return 0;
 }
 
 int AIPlayer::chooseBestOffer(const Shop& shop) const
 {
+    bool formationStage = pieceCount < MAX_DEPLOYED_PIECES ||
+                          countRolePieces(true) < 2 || countRolePieces(false) < 2;
     int bestSlot = -1;
-    int bestScore = -999999;
+    int bestClass = 0;
+    int bestResultingStar = -1;
+    int bestCost = -1;
     int i;
     for (i = 0; i < SHOP_SLOT_COUNT; i++)
     {
-        int score = evaluateOffer(shop, i);
-        if (score > bestScore)
+        int currentClass = classifyOffer(shop, i);
+        int currentResultingStar;
+        int currentCost;
+        bool better = false;
+        if (currentClass <= 0) continue;
+        currentResultingStar = calculateResultingStar(shop.getOfferType(i));
+        currentCost = shop.getOfferCost(i);
+        if (bestSlot < 0 || currentClass > bestClass)
+            better = true;
+        else if (currentClass == bestClass)
         {
-            bestScore = score;
+            if (formationStage)
+            {
+                if (currentCost < bestCost) better = true;
+            }
+            else if (currentResultingStar > bestResultingStar)
+                better = true;
+            else if (currentResultingStar == bestResultingStar && currentCost > bestCost)
+                better = true;
+        }
+        if (better)
+        {
             bestSlot = i;
+            bestClass = currentClass;
+            bestResultingStar = currentResultingStar;
+            bestCost = currentCost;
         }
     }
     return bestSlot;
@@ -1353,20 +1596,18 @@ int AIPlayer::chooseBestOffer(const Shop& shop) const
 
 bool AIPlayer::shouldRefresh(const Shop& shop) const
 {
-    return refreshesUsed < maximumRefreshes && gold >= 2 &&
-           !shop.hasAffordableOffer(gold);
+    return refreshesUsed < maximumRefreshes && gold >= 4 &&
+           hasRoomForFutureOffer() && chooseBestOffer(shop) < 0;
 }
 
 void AIPlayer::performShopping(Shop& shop)
 {
-    /* The AI refreshes at most once per round. */
     int purchases = 0;
     refreshesUsed = 0;
-    while (pieceCount < MAX_OWNED_PIECES && purchases < SHOP_SLOT_COUNT)
+    while (purchases < SHOP_SLOT_COUNT)
     {
         int slot = chooseBestOffer(shop);
-        if (slot < 0 || !shop.isOfferAvailable(slot) ||
-            shop.getOfferCost(slot) > gold)
+        if (slot < 0)
         {
             if (shouldRefresh(shop))
             {
@@ -1377,57 +1618,38 @@ void AIPlayer::performShopping(Shop& shop)
             }
             break;
         }
+        if (pieceCount >= MAX_OWNED_PIECES)
+        {
+            int sellIndex = findSellCandidate(shop.getOfferType(slot));
+            if (sellIndex < 0 || !sellPiece(sellIndex)) break;
+        }
+        if (shop.getOfferCost(slot) > gold) break;
         if (buyPiece(shop.createOfferedPiece(slot)))
         {
             shop.removeOffer(slot);
             purchases++;
         }
         else
-        {
             break;
-        }
     }
 }
 
 void AIPlayer::arrangeFormation()
 {
     int selected[MAX_OWNED_PIECES];
-    int selectedCount = 0;
-    int i, j;
+    int selectedCount;
+    int frontCol = 0;
+    int backCol = 0;
+    int i;
     clearAllPositions();
-    for (i = 0; i < pieceCount; i++) selected[i] = i;
-    for (i = 0; i < pieceCount - 1; i++)
+    selectCorePieces(selected, selectedCount);
+    for (i = 0; i < selectedCount; i++)
     {
-        /* Melee units use row 1; ranged units use row 0. */
-        int best = i;
-        for (j = i + 1; j < pieceCount; j++)
-        {
-            int scoreBest = pieces[selected[best]]->getStar() * 1000 +
-                            pieces[selected[best]]->getCost() * 100;
-            int scoreCurrent = pieces[selected[j]]->getStar() * 1000 +
-                               pieces[selected[j]]->getCost() * 100;
-            if (scoreCurrent > scoreBest) best = j;
-        }
-        if (best != i)
-        {
-            int temporary = selected[i];
-            selected[i] = selected[best];
-            selected[best] = temporary;
-        }
-    }
-    selectedCount = pieceCount;
-    if (selectedCount > MAX_DEPLOYED_PIECES) selectedCount = MAX_DEPLOYED_PIECES;
-    {
-        int frontCol = 0;
-        int backCol = 0;
-        for (i = 0; i < selectedCount; i++)
-        {
-            ChessPiece* piece = pieces[selected[i]];
-            if (piece->getType() == TYPE_WARRIOR || piece->getType() == TYPE_PALADIN)
-                placePiece(selected[i], 1, frontCol++, 0, 1);
-            else
-                placePiece(selected[i], 0, backCol++, 0, 1);
-        }
+        ChessPiece* piece = pieces[selected[i]];
+        if (isFrontlineType(piece->getType()))
+            placePiece(selected[i], 1, frontCol++, 0, 1);
+        else
+            placePiece(selected[i], 0, backCol++, 0, 1);
     }
     ready = 1;
 }
