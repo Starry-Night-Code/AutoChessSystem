@@ -4,6 +4,10 @@
 #include <cstdlib>
 #include <ctime>
 #include <cctype>
+#include <limits>
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 
 using namespace std;
@@ -2021,7 +2025,7 @@ int GameSystem::readInteger(int minimum, int maximum)
         cin >> value;
         if (cin && value >= minimum && value <= maximum) return value;
         cin.clear();
-        cin.ignore(10000, '\n');
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
         cout << "Invalid input. Enter " << minimum << "-" << maximum << ": ";
     }
 }
