@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <cctype>
+#include <windows.h>
 
 using namespace std;
 
@@ -25,6 +26,8 @@ const int MAX_NAME_LENGTH = 20;
 const int MAX_FILE_NAME_LENGTH = 80;
 const int MAX_ERROR_LENGTH = 128;
 const int MAX_BATTLE_ROUNDS = 100;
+const int INITIAL_BOARD_DELAY_MS = 2000;
+const int BATTLE_BOARD_DELAY_MS = 1000;
 
 enum PieceType
 {
@@ -1738,7 +1741,11 @@ int Battlefield::runBattle(Player& first, Player& second, bool verbose, int& rou
     roundsUsed = 0;
     if (!deployPlayers(first, second)) return RESULT_DRAW;
     sortBattlePiecesBySpeed();
-    if (verboseMode) printBoard();
+    if (verboseMode)
+    {
+        printBoard();
+        Sleep(INITIAL_BOARD_DELAY_MS);
+    }
     for (roundNumber = 1; roundNumber <= maximumRounds; roundNumber++)
     {
         int i;
@@ -1765,6 +1772,7 @@ int Battlefield::runBattle(Player& first, Player& second, bool verbose, int& rou
         {
             cout << "\nBattle round " << roundNumber << "\n";
             printBoard();
+            Sleep(BATTLE_BOARD_DELAY_MS);
         }
         if (!hasLivingTeam(0) || !hasLivingTeam(1)) break;
     }
