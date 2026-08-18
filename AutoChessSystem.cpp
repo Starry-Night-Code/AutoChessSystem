@@ -2007,8 +2007,7 @@ void GameSystem::showPreparationMenu() const
     cout << "4. Refresh shop (2 gold)\n";
     cout << "5. Sell piece\n";
     cout << "6. Place or move piece\n";
-    cout << "7. Show piece details\n";
-    cout << "8. Finish preparation\n";
+    cout << "7. Finish preparation\n";
     cout << "0. Abandon game\n";
     cout << "Select: ";
 }
@@ -2049,7 +2048,7 @@ void GameSystem::prepareHuman()
     {
         int choice;
         showPreparationMenu();
-        choice = readInteger(0, 8);
+        choice = readInteger(0, 7);
         if (choice == 1)
         {
             human.showStatus();
@@ -2068,8 +2067,7 @@ void GameSystem::prepareHuman()
         }
         else if (choice == 5) handleSell();
         else if (choice == 6) handlePlacement();
-        else if (choice == 7) human.showRoster();
-        else if (choice == 8)
+        else if (choice == 7)
         {
             if (!human.hasDeployedPiece()) cout << "Deploy at least one piece first.\n";
             else preparing = 0;

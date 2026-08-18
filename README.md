@@ -143,8 +143,7 @@ g++ -std=c++03 -Wall -Wextra -Werror -pedantic -o AutoChessSystem.exe AutoChessS
 4. Refresh shop (2 gold)
 5. Sell piece
 6. Place or move piece
-7. Show piece details
-8. Finish preparation
+7. Finish preparation
 0. Abandon game
 ```
 
