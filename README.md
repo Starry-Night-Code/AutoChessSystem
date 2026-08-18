@@ -164,6 +164,8 @@ g++ -std=c++03 -Wall -Wextra -Werror -pedantic -o AutoChessSystem.exe AutoChessS
 - AI 初始部署区域为第 `0～1` 行。
 - 玩家部署区域为第 `4～5` 行。
 
+每次显示 `Human Roster` 后，程序都会输出一个不带额外表头的 6×6 玩家棋盘。棋盘只显示当前已上阵的玩家棋子，板凳棋子仍只显示在 Roster 列表中，AI 棋子不会出现在该棋盘中。
+
 ### 棋盘符号
 
 | 符号 | 职业 |

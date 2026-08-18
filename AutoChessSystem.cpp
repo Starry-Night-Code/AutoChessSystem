@@ -254,6 +254,9 @@ public:
 
 class Player
 {
+private:
+    void showFormationBoard() const;
+
 protected:
     char playerName[MAX_NAME_LENGTH];
     int playerId;
@@ -1210,6 +1213,33 @@ void Player::clearAllPositions()
     deployedCount = 0;
 }
 
+void Player::showFormationBoard() const
+{
+    char board[BOARD_SIZE][BOARD_SIZE];
+    int rowIndex;
+    int colIndex;
+    int pieceIndex;
+    for (rowIndex = 0; rowIndex < BOARD_SIZE; rowIndex++)
+        for (colIndex = 0; colIndex < BOARD_SIZE; colIndex++)
+            board[rowIndex][colIndex] = '.';
+
+    for (pieceIndex = 0; pieceIndex < pieceCount; pieceIndex++)
+    {
+        ChessPiece* piece = pieces[pieceIndex];
+        if (piece != 0 && piece->isDeployed())
+            board[piece->getRow()][piece->getCol()] = piece->getSymbol();
+    }
+
+    cout << "\n   0 1 2 3 4 5\n";
+    for (rowIndex = 0; rowIndex < BOARD_SIZE; rowIndex++)
+    {
+        cout << rowIndex << "  ";
+        for (colIndex = 0; colIndex < BOARD_SIZE; colIndex++)
+            cout << board[rowIndex][colIndex] << ' ';
+        cout << "\n";
+    }
+}
+
 void Player::showRoster(bool readOnly) const
 {
     int i;
@@ -1219,6 +1249,7 @@ void Player::showRoster(bool readOnly) const
         cout << "\n--- " << playerName << " Roster ---\n";
     if (pieceCount == 0) cout << "No pieces owned.\n";
     for (i = 0; i < pieceCount; i++) cout << (i + 1) << ". " << *pieces[i] << "\n";
+    showFormationBoard();
 }
 
 void Player::showStatus(bool readOnly) const
