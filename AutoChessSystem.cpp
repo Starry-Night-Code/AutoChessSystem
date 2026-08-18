@@ -281,7 +281,7 @@ public:
     bool isCellOccupied(int checkRow, int checkCol, int ignoredIndex) const;
     void clearAllPositions();
     void showRoster(bool readOnly) const;
-    void showStatus() const;
+    void showStatus(bool readOnly) const;
     void addGold(int amount);
     bool spendGold(int amount);
     void takePlayerDamage(int damage);
@@ -1221,8 +1221,10 @@ void Player::showRoster(bool readOnly) const
     for (i = 0; i < pieceCount; i++) cout << (i + 1) << ". " << *pieces[i] << "\n";
 }
 
-void Player::showStatus() const
+void Player::showStatus(bool readOnly) const
 {
+    if (readOnly)
+        cout << "\n*** " << playerName << " Status ***\n";
     cout << playerName << " HP:" << playerHealth << " Gold:" << gold
          << " Pieces:" << pieceCount << " Deployed:" << deployedCount << "\n";
 }
@@ -2057,7 +2059,7 @@ void GameSystem::prepareHuman()
         choice = readInteger(0, 7);
         if (choice == 1)
         {
-            human.showStatus();
+            human.showStatus(true);
             human.showRoster(true);
         }
         else if (choice == 2) shop.showOffers(true);
@@ -2154,14 +2156,14 @@ void GameSystem::playRound()
     human.addGold(5);
     computer.addGold(5);
     cout << "\n========== GAME ROUND " << currentRound << " ==========\n";
-    human.showStatus();
+    human.showStatus(false);
     prepareHuman();
     if (!gameActive) return;
     shop.refresh();
     computer.performShopping(shop);
     computer.arrangeFormation();
     cout << "\nAI preparation completed.\n";
-    computer.showStatus();
+    computer.showStatus(false);
     lastBattleResult = battlefield.runBattle(human, computer, true, roundsUsed);
     if (lastBattleResult == RESULT_HUMAN_WIN)
         survivorStars = battlefield.calculateSurvivorStars(0);
@@ -2194,8 +2196,8 @@ void GameSystem::settleBattle(int result, int survivorStars)
         computer.takePlayerDamage(2);
         cout << "Draw. Both players take 2 damage.\n";
     }
-    human.showStatus();
-    computer.showStatus();
+    human.showStatus(false);
+    computer.showStatus(false);
 }
 
 void GameSystem::showInstructions() const
