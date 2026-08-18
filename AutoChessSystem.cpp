@@ -300,7 +300,6 @@ class AIPlayer : public Player
 private:
     int reserveGold;
     int maximumRefreshes;
-    int formationPreference;
     int duplicateBonus;
     int valueWeight;
     int refreshesUsed;
@@ -1257,7 +1256,7 @@ bool Player::hasDeployedPiece() const { return deployedCount > 0; }
 
 AIPlayer::AIPlayer(const char* newName, int newId)
     : Player(newName, newId), reserveGold(2), maximumRefreshes(1),
-      formationPreference(1), duplicateBonus(300), valueWeight(10),
+      duplicateBonus(300), valueWeight(10),
       refreshesUsed(0)
 {
 }
