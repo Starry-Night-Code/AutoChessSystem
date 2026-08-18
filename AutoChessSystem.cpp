@@ -429,7 +429,7 @@ public:
     bool openFiles();
     void closeFiles();
     bool readNextCase(Player& human, AIPlayer& computer, Shop& shop,
-                      int& expectedWinner, unsigned long& seed);
+                      int& expectedWinner);
     void writeHeader();
     void writeResult(int caseNumber, int expectedWinner,
                      int actualWinner, int roundsUsed);
@@ -2139,18 +2139,17 @@ void FileManager::closeFiles()
 }
 
 bool FileManager::readNextCase(Player& humanPlayer, AIPlayer& aiPlayer,
-                               Shop& testShop, int& expectedWinner,
-                               unsigned long& seed)
+                               Shop& testShop, int& expectedWinner)
 {
     /*
      * File format after the first line (case count):
-     * expectedWinner humanCount aiCount seed
+     * expectedWinner humanCount aiCount
      * followed by human and AI records: type star row column
      */
     int humanCount, aiCount;
     int i;
     if (!filesOpened || currentCase >= totalCases) return false;
-    inputFile >> expectedWinner >> humanCount >> aiCount >> seed;
+    inputFile >> expectedWinner >> humanCount >> aiCount;
     if (!inputFile || expectedWinner < 0 || expectedWinner > 2 ||
         humanCount < 1 || humanCount > MAX_DEPLOYED_PIECES ||
         aiCount < 1 || aiCount > MAX_DEPLOYED_PIECES)
@@ -2492,15 +2491,13 @@ void GameSystem::runFileTests()
     while (fileManager.hasMoreCases())
     {
         int expectedWinner;
-        unsigned long seed;
         int roundsUsed;
         int actualWinner;
-        if (!fileManager.readNextCase(testHuman, testAI, testShop, expectedWinner, seed))
+        if (!fileManager.readNextCase(testHuman, testAI, testShop, expectedWinner))
         {
             cout << "Test error: " << fileManager.getErrorMessage() << "\n";
             break;
         }
-        testShop.setRandomSeed(seed);
         actualWinner = testField.runBattle(testHuman, testAI, false, roundsUsed);
         fileManager.writeResult(fileManager.getCurrentCase(), expectedWinner,
                                 actualWinner, roundsUsed);
