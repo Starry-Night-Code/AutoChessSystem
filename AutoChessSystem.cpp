@@ -308,7 +308,6 @@ public:
 class AIPlayer : public Player
 {
 private:
-    int reserveGold;
     int maximumRefreshes;
     int duplicateBonus;
     int valueWeight;
@@ -324,7 +323,6 @@ public:
     void arrangeFormation();
     int chooseBestOffer(const Shop& shop) const;
     bool shouldRefresh(const Shop& shop) const;
-    int getReserveGold() const;
     int getRefreshesUsed() const;
 };
 
@@ -1297,8 +1295,7 @@ ChessPiece* Player::getPiece(int index) const
 bool Player::hasDeployedPiece() const { return deployedCount > 0; }
 
 AIPlayer::AIPlayer(const char* newName, int newId)
-    : Player(newName, newId), reserveGold(2), maximumRefreshes(1),
-      duplicateBonus(300), valueWeight(10),
+    : Player(newName, newId), maximumRefreshes(1), duplicateBonus(300), valueWeight(10),
       refreshesUsed(0)
 {
 }
@@ -1356,20 +1353,20 @@ int AIPlayer::chooseBestOffer(const Shop& shop) const
 
 bool AIPlayer::shouldRefresh(const Shop& shop) const
 {
-    return refreshesUsed < maximumRefreshes && gold >= reserveGold + 2 &&
-           !shop.hasAffordableOffer(gold - reserveGold);
+    return refreshesUsed < maximumRefreshes && gold >= 2 &&
+           !shop.hasAffordableOffer(gold);
 }
 
 void AIPlayer::performShopping(Shop& shop)
 {
-    /* The AI keeps a small gold reserve and refreshes at most once per round. */
+    /* The AI refreshes at most once per round. */
     int purchases = 0;
     refreshesUsed = 0;
     while (pieceCount < MAX_OWNED_PIECES && purchases < SHOP_SLOT_COUNT)
     {
         int slot = chooseBestOffer(shop);
         if (slot < 0 || !shop.isOfferAvailable(slot) ||
-            shop.getOfferCost(slot) > gold - reserveGold)
+            shop.getOfferCost(slot) > gold)
         {
             if (shouldRefresh(shop))
             {
@@ -1435,7 +1432,6 @@ void AIPlayer::arrangeFormation()
     ready = 1;
 }
 
-int AIPlayer::getReserveGold() const { return reserveGold; }
 int AIPlayer::getRefreshesUsed() const { return refreshesUsed; }
 
 Shop::Shop() : randomState(1), nextPieceId(1)
