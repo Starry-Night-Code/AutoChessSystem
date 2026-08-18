@@ -80,7 +80,6 @@ protected:
     int col;
     int team;
     int alive;
-    int actionCounter;
 
 public:
     ChessPiece(int newId, int newType, const char* newName, int newCost,
@@ -115,12 +114,10 @@ public:
     int getHealth() const;
     int getAttackPower() const;
     int getDefense() const;
-    int getAttackRange() const;
     int getSpeed() const;
     int getRow() const;
     int getCol() const;
     int getTeam() const;
-    const char* getName() const;
     void setPosition(int newRow, int newCol);
 
     bool operator==(const ChessPiece& other) const;
@@ -137,6 +134,10 @@ protected:
     int skillBonusDamage;
     int temporaryDefense;
 
+private:
+    void gainRage(int amount);
+    bool isRageReady() const;
+
 public:
     WarriorPiece(int newId, const char* newName, int newCost,
                  int newHealth, int newAttack, int newDefense,
@@ -150,9 +151,6 @@ public:
     virtual int calculatePriority(ChessPiece* target) const;
     virtual void resetSpecialState();
     virtual void takeDamage(int damage);
-    void gainRage(int amount);
-    bool isRageReady() const;
-    int getRage() const;
 };
 
 class ArcherPiece : public ChessPiece
@@ -163,6 +161,8 @@ private:
     int criticalPercent;
     int preferredDistance;
     int focusBonus;
+    bool isCriticalShot() const;
+    int calculateCriticalDamage(const ChessPiece* target) const;
 
 public:
     ArcherPiece(int newId, const char* newName, int newCost,
@@ -176,9 +176,6 @@ public:
     virtual char getSymbol() const;
     virtual int calculatePriority(ChessPiece* target) const;
     virtual void resetSpecialState();
-    bool isCriticalShot() const;
-    int calculateCriticalDamage(const ChessPiece* target) const;
-    int getShotCounter() const;
 };
 
 class MagePiece : public ChessPiece
@@ -189,6 +186,8 @@ private:
     int manaPerAttack;
     int spellPower;
     int splashDistance;
+    void gainMana(int amount);
+    bool isManaReady() const;
 
 public:
     MagePiece(int newId, const char* newName, int newCost,
@@ -202,9 +201,6 @@ public:
     virtual char getSymbol() const;
     virtual int calculatePriority(ChessPiece* target) const;
     virtual void resetSpecialState();
-    void gainMana(int amount);
-    bool isManaReady() const;
-    int getMana() const;
 };
 
 class HealingTrait
@@ -214,19 +210,16 @@ protected:
     int healRange;
     int healCooldown;
     int remainingCooldown;
-    int totalHealing;
-
-public:
-    HealingTrait();
-    virtual ~HealingTrait();
     bool canHeal() const;
     void tickHealingCooldown();
     int findLowestHealthAlly(ChessPiece* allies[], int count,
                             const ChessPiece* healer) const;
     void healAlly(ChessPiece* ally);
     void resetHealingState();
-    int getHealPower() const;
-    int getTotalHealing() const;
+
+public:
+    HealingTrait();
+    virtual ~HealingTrait();
 };
 
 class PaladinPiece : public WarriorPiece, public HealingTrait
@@ -237,6 +230,7 @@ private:
     int healThresholdPercent;
     int holyCounter;
     int auraDefense;
+    void addShield(int amount);
 
 public:
     PaladinPiece(int newId, const char* newName, int newCost,
@@ -251,14 +245,16 @@ public:
     virtual int calculatePriority(ChessPiece* target) const;
     virtual void resetSpecialState();
     virtual void takeDamage(int damage);
-    void addShield(int amount);
-    int getShieldPoints() const;
 };
 
 class Player
 {
 private:
     void showFormationBoard() const;
+    void removeAt(int index, bool destroyPiece);
+    void clearPieces();
+    bool checkAndMerge();
+    bool isCellOccupied(int checkRow, int checkCol, int ignoredIndex) const;
 
 protected:
     char playerName[MAX_NAME_LENGTH];
@@ -270,22 +266,18 @@ protected:
     int deployedCount;
     int totalWins;
 
-    void removeAt(int index, bool destroyPiece);
+    void clearAllPositions();
 
 public:
     Player(const char* newName = "Human", int newId = 0);
     virtual ~Player();
     void resetForNewGame(const char* newName, int newId);
-    void clearPieces();
     bool buyPiece(ChessPiece* piece);
     bool addPieceForTest(ChessPiece* piece, int newRow, int newCol);
     bool sellPiece(int index);
     bool placePiece(int index, int newRow, int newCol,
                     int minimumRow, int maximumRow);
     bool returnPieceToBench(int index);
-    bool checkAndMerge();
-    bool isCellOccupied(int checkRow, int checkCol, int ignoredIndex) const;
-    void clearAllPositions();
     void showRoster(bool readOnly) const;
     void showStatus(bool readOnly) const;
     void addGold(int amount);
@@ -293,8 +285,6 @@ public:
     void takePlayerDamage(int damage);
     void addWin();
 
-    const char* getPlayerName() const;
-    int getPlayerId() const;
     int getPlayerHealth() const;
     int getGold() const;
     int getPieceCount() const;
@@ -330,10 +320,8 @@ private:
 public:
     AIPlayer(const char* newName = "Computer", int newId = 1);
     virtual ~AIPlayer();
-    void resetAI();
     void performShopping(Shop& shop);
     void arrangeFormation();
-    int getRefreshesUsed() const;
 };
 
 class Shop
@@ -352,11 +340,11 @@ private:
     int nextPieceId;
 
     int nextRandom(int maximum);
+    void initializeCatalog();
 
 public:
     Shop();
     ~Shop();
-    void initializeCatalog();
     void setRandomSeed(unsigned long seed);
     void refresh();
     void showOffers(const Player& viewer, bool readOnly) const;
@@ -367,7 +355,6 @@ public:
     ChessPiece* createOfferedPiece(int slot);
     ChessPiece* createPieceByType(int pieceType);
     void removeOffer(int slot);
-    bool hasAffordableOffer(int availableGold) const;
 };
 
 class Battlefield
@@ -396,18 +383,16 @@ private:
     bool hasLivingTeam(int team) const;
     void removeDeadPiecesFromBoard();
     void moveTowardTarget(ChessPiece* piece, ChessPiece* target);
+    bool deployPlayers(Player& first, Player& second);
+    void printBoard() const;
+    bool isInsideBoard(int checkRow, int checkCol) const;
+    bool isCellEmpty(int checkRow, int checkCol) const;
 
 public:
     Battlefield();
     ~Battlefield();
-    bool deployPlayers(Player& first, Player& second);
     int runBattle(Player& first, Player& second, bool verbose, int& roundsUsed);
-    void printBoard() const;
     int calculateSurvivorStars(int team) const;
-    int getCurrentRound() const;
-    int getLastWinner() const;
-    bool isInsideBoard(int checkRow, int checkCol) const;
-    bool isCellEmpty(int checkRow, int checkCol) const;
 };
 
 class FileManager
@@ -452,7 +437,6 @@ private:
     int programRunning;
     int lastBattleResult;
     unsigned long gameSeed;
-    int abandonedGames;
 
     int readInteger(int minimum, int maximum);
     void showMainMenu() const;
@@ -463,17 +447,17 @@ private:
     void handlePlacement();
     void handleReturnToBench();
     void settleBattle(int result, int survivorStars);
-
-public:
-    GameSystem();
-    ~GameSystem();
-    void run();
     void startNewGame();
     void playRound();
     void showInstructions() const;
     void runFileTests();
     bool isGameOver() const;
     void printGameResult() const;
+
+public:
+    GameSystem();
+    ~GameSystem();
+    void run();
 };
 
 ChessPiece::ChessPiece(int newId, int newType, const char* newName, int newCost,
@@ -482,7 +466,7 @@ ChessPiece::ChessPiece(int newId, int newType, const char* newName, int newCost,
     : id(newId), type(newType), star(1), cost(newCost),
       maxHealth(newHealth), health(newHealth), attackPower(newAttack),
       defense(newDefense), attackRange(newRange), speed(newSpeed),
-      row(-1), col(-1), team(0), alive(1), actionCounter(0)
+      row(-1), col(-1), team(0), alive(1)
 {
     strncpy(name, newName, MAX_NAME_LENGTH - 1);
     name[MAX_NAME_LENGTH - 1] = '\0';
@@ -513,7 +497,6 @@ void ChessPiece::normalAttack(ChessPiece* target)
     if (damage < 1)
         damage = 1;
     target->takeDamage(damage);
-    actionCounter++;
 }
 
 void ChessPiece::receiveHealing(int amount)
@@ -538,7 +521,6 @@ void ChessPiece::resetForBattle()
 {
     health = maxHealth;
     alive = 1;
-    actionCounter = 0;
     resetSpecialState();
 }
 
@@ -546,7 +528,6 @@ void ChessPiece::restoreAfterBattle()
 {
     health = maxHealth;
     alive = 1;
-    actionCounter = 0;
     resetSpecialState();
 }
 
@@ -579,12 +560,10 @@ int ChessPiece::getMaxHealth() const { return maxHealth; }
 int ChessPiece::getHealth() const { return health; }
 int ChessPiece::getAttackPower() const { return attackPower; }
 int ChessPiece::getDefense() const { return defense; }
-int ChessPiece::getAttackRange() const { return attackRange; }
 int ChessPiece::getSpeed() const { return speed; }
 int ChessPiece::getRow() const { return row; }
 int ChessPiece::getCol() const { return col; }
 int ChessPiece::getTeam() const { return team; }
-const char* ChessPiece::getName() const { return name; }
 void ChessPiece::setPosition(int newRow, int newCol) { row = newRow; col = newCol; }
 
 bool ChessPiece::operator==(const ChessPiece& other) const
@@ -686,7 +665,6 @@ void WarriorPiece::useSkill(ChessPiece* target, ChessPiece* enemies[],
         }
         rage = 0;
         temporaryDefense = 2;
-        actionCounter++;
     }
     else
     {
@@ -728,7 +706,6 @@ void WarriorPiece::gainRage(int amount)
 }
 
 bool WarriorPiece::isRageReady() const { return rage >= maxRage; }
-int WarriorPiece::getRage() const { return rage; }
 
 ArcherPiece::ArcherPiece(int newId, const char* newName, int newCost,
                          int newHealth, int newAttack, int newDefense,
@@ -777,7 +754,6 @@ void ArcherPiece::useSkill(ChessPiece* target, ChessPiece* enemies[],
     if (isCriticalShot())
     {
         target->takeDamage(calculateCriticalDamage(target));
-        actionCounter++;
     }
     else
     {
@@ -807,8 +783,6 @@ int ArcherPiece::calculateCriticalDamage(const ChessPiece* target) const
     if (damage < 1) damage = 1;
     return damage;
 }
-
-int ArcherPiece::getShotCounter() const { return shotCounter; }
 
 MagePiece::MagePiece(int newId, const char* newName, int newCost,
                      int newHealth, int newAttack, int newDefense,
@@ -865,7 +839,6 @@ void MagePiece::useSkill(ChessPiece* target, ChessPiece* enemies[],
             }
         }
         mana = 0;
-        actionCounter++;
     }
     else
     {
@@ -891,11 +864,9 @@ void MagePiece::gainMana(int amount)
 }
 
 bool MagePiece::isManaReady() const { return mana >= maxMana; }
-int MagePiece::getMana() const { return mana; }
 
 HealingTrait::HealingTrait()
-    : healPower(24), healRange(4), healCooldown(3), remainingCooldown(0),
-      totalHealing(0)
+    : healPower(24), healRange(4), healCooldown(3), remainingCooldown(0)
 {
 }
 
@@ -936,18 +907,13 @@ void HealingTrait::healAlly(ChessPiece* ally)
 {
     if (ally == 0 || !ally->isAlive() || !canHeal()) return;
     ally->receiveHealing(healPower);
-    totalHealing += healPower;
     remainingCooldown = healCooldown;
 }
 
 void HealingTrait::resetHealingState()
 {
     remainingCooldown = 0;
-    totalHealing = 0;
 }
-
-int HealingTrait::getHealPower() const { return healPower; }
-int HealingTrait::getTotalHealing() const { return totalHealing; }
 
 PaladinPiece::PaladinPiece(int newId, const char* newName, int newCost,
                            int newHealth, int newAttack, int newDefense,
@@ -984,7 +950,6 @@ void PaladinPiece::useSkill(ChessPiece* target, ChessPiece* enemies[],
         {
             healAlly(allies[allyIndex]);
             addShield(maximumShield / 2);
-            actionCounter++;
             return;
         }
     }
@@ -1033,8 +998,6 @@ void PaladinPiece::addShield(int amount)
     shieldPoints += amount;
     if (shieldPoints > maximumShield) shieldPoints = maximumShield;
 }
-
-int PaladinPiece::getShieldPoints() const { return shieldPoints; }
 
 Player::Player(const char* newName, int newId)
     : playerId(newId), playerHealth(30), gold(10), pieceCount(0),
@@ -1287,8 +1250,6 @@ void Player::takePlayerDamage(int damage)
 }
 
 void Player::addWin() { totalWins++; }
-const char* Player::getPlayerName() const { return playerName; }
-int Player::getPlayerId() const { return playerId; }
 int Player::getPlayerHealth() const { return playerHealth; }
 int Player::getGold() const { return gold; }
 int Player::getPieceCount() const { return pieceCount; }
@@ -1310,11 +1271,6 @@ AIPlayer::AIPlayer(const char* newName, int newId)
 
 AIPlayer::~AIPlayer()
 {
-}
-
-void AIPlayer::resetAI()
-{
-    refreshesUsed = 0;
 }
 
 bool AIPlayer::isFrontlineType(int pieceType) const
@@ -1650,8 +1606,6 @@ void AIPlayer::arrangeFormation()
     }
 }
 
-int AIPlayer::getRefreshesUsed() const { return refreshesUsed; }
-
 Shop::Shop() : randomState(1), nextPieceId(1)
 {
     int i;
@@ -1780,14 +1734,6 @@ ChessPiece* Shop::createPieceByType(int pieceType)
 void Shop::removeOffer(int slot)
 {
     if (slot >= 0 && slot < SHOP_SLOT_COUNT) offers[slot] = -1;
-}
-
-bool Shop::hasAffordableOffer(int availableGold) const
-{
-    int i;
-    for (i = 0; i < SHOP_SLOT_COUNT; i++)
-        if (isOfferAvailable(i) && getOfferCost(i) <= availableGold) return true;
-    return false;
 }
 
 Battlefield::Battlefield()
@@ -2084,9 +2030,6 @@ int Battlefield::calculateSurvivorStars(int teamNumber) const
     return 0;
 }
 
-int Battlefield::getCurrentRound() const { return currentRound; }
-int Battlefield::getLastWinner() const { return lastWinner; }
-
 FileManager::FileManager(const char* inputName, const char* outputName)
     : currentCase(0), totalCases(0), filesOpened(0)
 {
@@ -2219,8 +2162,7 @@ GameSystem::GameSystem()
     : human("Human", 0), computer("Computer", 1),
       fileManager("test_cases.txt", "test_results.txt"),
       currentRound(0), gameActive(0), programRunning(1),
-      lastBattleResult(RESULT_DRAW), gameSeed((unsigned long)time(0)),
-      abandonedGames(0)
+      lastBattleResult(RESULT_DRAW), gameSeed((unsigned long)time(0))
 {
     shop.setRandomSeed(gameSeed);
 }
@@ -2288,7 +2230,6 @@ void GameSystem::startNewGame()
 {
     human.resetForNewGame("Human", 0);
     computer.resetForNewGame("Computer", 1);
-    computer.resetAI();
     currentRound = 0;
     gameActive = 1;
     gameSeed = (unsigned long)time(0);
@@ -2336,7 +2277,6 @@ void GameSystem::prepareHuman()
             if (readInteger(0, 1) == 1)
             {
                 gameActive = 0;
-                abandonedGames++;
             }
         }
     }
