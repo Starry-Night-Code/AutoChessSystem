@@ -268,7 +268,6 @@ protected:
     ChessPiece* pieces[MAX_OWNED_PIECES];
     int pieceCount;
     int deployedCount;
-    int ready;
     int totalWins;
 
     void removeAt(int index, bool destroyPiece);
@@ -1039,7 +1038,7 @@ int PaladinPiece::getShieldPoints() const { return shieldPoints; }
 
 Player::Player(const char* newName, int newId)
     : playerId(newId), playerHealth(30), gold(10), pieceCount(0),
-      deployedCount(0), ready(0), totalWins(0)
+      deployedCount(0), totalWins(0)
 {
     int i;
     strncpy(playerName, newName, MAX_NAME_LENGTH - 1);
@@ -1061,7 +1060,6 @@ void Player::resetForNewGame(const char* newName, int newId)
     playerId = newId;
     playerHealth = 30;
     gold = 10;
-    ready = 0;
     totalWins = 0;
 }
 
@@ -1317,7 +1315,6 @@ AIPlayer::~AIPlayer()
 void AIPlayer::resetAI()
 {
     refreshesUsed = 0;
-    ready = 0;
 }
 
 bool AIPlayer::isFrontlineType(int pieceType) const
@@ -1651,7 +1648,6 @@ void AIPlayer::arrangeFormation()
         else
             placePiece(selected[i], 0, backCol++, 0, 1);
     }
-    ready = 1;
 }
 
 int AIPlayer::getRefreshesUsed() const { return refreshesUsed; }
